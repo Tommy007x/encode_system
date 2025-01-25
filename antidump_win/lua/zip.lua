@@ -59,9 +59,13 @@ safeguard.decodeStr = function(input)
         return string.char(string.byte(c) ~ keyBytes[(counter - 1) % keyLen + 1])
     end)
 	
-    return output
-end
 
+	local interpreted = output:gsub("\\(%d+)", function(code)
+		return string.char(code)
+	end)
+
+    return interpreted
+end
 
 
 

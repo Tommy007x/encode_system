@@ -1,8 +1,14 @@
 const b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const path = require('path');
-// const fs = require('fs');
 const fs = require('fs');
+const fengari = require('fengari');
 
+const lua = fengari.lua;
+const lauxlib = fengari.lauxlib;
+const lualib = fengari.lualib;
+const L = lauxlib.luaL_newstate();
+
+lualib.luaL_openlibs(L);
 
 function xorEncrypt(key, data) {
     let result = '';
@@ -48,7 +54,30 @@ function encodeStrOld(key, str, notutf8) {
     });
 }
 
+function getByteInLuaStyle(str) {
+    let luaCode = `
+        local script = [[${str}]]
+        local byte_str = {}
+        for i = 1, #script do
+            byte_str[#byte_str + 1] = [[\\]] .. string.byte(script, i)
+        end
+        return table.concat(byte_str)
+    `;
+
+    // Load the Lua code
+    if (lauxlib.luaL_loadstring(L, fengari.to_luastring(luaCode)) !== lua.LUA_OK) {
+        console.log("Error loading Lua script");
+        console.log(lua.lua_tostring(L, -1));
+    } else {
+        lua.lua_call(L, 0, 1);  // 0 arguments, expect 1 return value
+        const luaResult = fengari.to_jsstring(lua.lua_tostring(L, -1));  // Get the result from the Lua stack
+        lua.lua_settop(L, 0);
+        return luaResult;
+    }
+}
+
 function xorEncryptDecrypt(input, key) {
+    input = getByteInLuaStyle(input)
     const keyLen = key.length;
     let counter = 0;
     const output = [];
